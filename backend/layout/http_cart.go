@@ -1,0 +1,152 @@
+package layout
+
+import (
+	"errors"
+	"fmt"
+	"html/template"
+	"math/rand"
+	"net/http"
+	"time"
+
+	"github.com/bkielbasa/go-ecommerce/backend/cart/domain"
+	"github.com/bkielbasa/go-ecommerce/backend/internal/https"
+	"github.com/gorilla/mux"
+)
+
+func (handler httpHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
+	// Per-IP rate limit: 30 cart-adds/minute. The legitimate flow is one
+	// click → one POST, so 30/min easily covers an enthusiastic shopper;
+	// anything beyond that smells like a scraper or a stuck retry loop and
+	// gets a clean 429 (HTMX surfaces it as a failed request without
+	// disturbing the rest of the page).
+	if !addToCartLimiter.Allow(clientIP(r)) {
+		http.Error(w, "too many requests, please slow down", http.StatusTooManyRequests)
+		return
+	}
+
+	cartID := cartIDFromCookies(w, r)
+	variantID := mux.Vars(r)["variantID"]
+
+	err := handler.cartSrv.AddToCart(r.Context(), cartID, variantID, 1)
+
+	if errors.Is(err, domain.ErrProductNotFound) {
+		https.NotFound(w, "cart-not-found", err.Error())
+		return
+	}
+
+	if errors.Is(err, domain.ErrOutOfStock) {
+		http.Error(w, "this item is out of stock", http.StatusConflict)
+		return
+	}
+
+	if err != nil {
+		https.InternalError(w, "internal-error", err.Error())
+		handler.logger.WithError(err).Error("cannot add item to cart")
+		return
+	}
+
+	w.Header().Add("HX-Trigger", "cartBudge")
+
+	https.NoContent(w)
+}
+
+func (handler httpHandler) Cart(w http.ResponseWriter, r *http.Request) {
+	cartID := cartIDFromCookies(w, r)
+
+	cart, err := handler.cartSrv.Get(r.Context(), cartID)
+	if err != nil {
+		https.InternalError(w, "internal-error", err.Error())
+		return
+	}
+
+	resp := map[string]any{
+		"Cart": cart,
+	}
+	handler.renderTemplate(w, r, "cart/show", resp)
+}
+
+func (handler httpHandler) Budge(w http.ResponseWriter, r *http.Request) {
+	cartID := cartIDFromCookies(w, r)
+
+	cart, err := handler.cartSrv.Get(r.Context(), cartID)
+	if err != nil {
+		https.InternalError(w, "internal-error", err.Error())
+		return
+	}
+
+	counter := cart.TotalQuantity()
+
+	if counter == 0 {
+		return
+	}
+
+	resp := map[string]any{
+		"Counter": counter,
+	}
+
+	files := []string{
+		"./layout/tmpl/cart/budge.gohtml",
+	}
+
+	var ts = template.Must(template.New("").Funcs(template.FuncMap{
+		"html": func(value interface{}) template.HTML {
+			return template.HTML(fmt.Sprint(value))
+		},
+		"add": func(a, b string) float64 {
+			return 666
+		},
+	}).ParseFiles(files...))
+	err = ts.ExecuteTemplate(w, "budge.gohtml", resp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func cartIDFromCookies(w http.ResponseWriter, r *http.Request) string {
+	if cookie, err := r.Cookie("cart_id"); err == nil {
+		// The cookie may have been issued by an earlier buggy version with
+		// Path=/cart/. Re-issue at Path=/ and explicitly expire the stale
+		// /cart/-scoped one so the browser stops sending two cookies with
+		// the same name. The /-scoped Set-Cookie also overwrites the
+		// current /-scoped cookie in-place, which is harmless.
+		http.SetCookie(w, &http.Cookie{
+			Name:   "cart_id",
+			Value:  "",
+			Path:   "/cart/",
+			MaxAge: -1,
+		})
+		http.SetCookie(w, &http.Cookie{
+			Name:     "cart_id",
+			Value:    cookie.Value,
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+		})
+		return cookie.Value
+	}
+
+	cartID := "cart-" + randomString(16)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "cart_id",
+		Value:    cartID,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	return cartID
+}
+
+const charset = "abcdefghijklmnopqrstuvwxyz" +
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+var seededRand *rand.Rand = rand.New(
+	rand.NewSource(time.Now().UnixNano()))
+
+func randomString(length int) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
+}

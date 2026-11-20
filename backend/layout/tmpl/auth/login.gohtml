@@ -1,0 +1,24 @@
+{{define "title"}}Sign in · {{.SiteName}}{{end}}
+{{define "description"}}Sign in to your {{.SiteName}} account.{{end}}
+
+{{define "main"}}
+  <h1 class="page-title">sign in</h1>
+
+  <form class="form" method="post" action="/auth/login">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <div class="field">
+      <label for="login-email">email</label>
+      <input id="login-email" type="email" name="email" autocomplete="email" required>
+    </div>
+
+    <div class="field">
+      <label for="login-password">password</label>
+      <input id="login-password" type="password" name="password" autocomplete="current-password" required>
+    </div>
+
+    <button type="submit" class="btn btn--block">sign in</button>
+
+    <p class="form__aside">not a member? <a href="/auth/register">register</a></p>
+    <p class="form__aside"><a href="/auth/forgot">forgot password?</a></p>
+  </form>
+{{end}}

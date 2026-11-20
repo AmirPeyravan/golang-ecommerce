@@ -1,0 +1,23 @@
+{{if .Products}}
+  <div class="product-grid">
+    {{range .Products}}
+      <a class="product-card" href="/product/{{.ID}}">
+        {{if .Thumbnail}}
+          <img class="product-card__image"
+               src="{{.Thumbnail}}"
+               alt="{{.Name}}"
+               loading="lazy"
+               width="800" height="800">
+        {{end}}
+        <h2 class="product-card__name">{{.Name}}</h2>
+        <p class="product-card__price">{{if .HasPriceRange}}from {{end}}{{ money .PriceFrom.Amount }}</p>
+      </a>
+    {{end}}
+  </div>
+{{else}}
+  {{if .Search}}
+    <p class="muted">no products match &ldquo;{{.Search}}&rdquo;.</p>
+  {{else}}
+    <p class="muted">no products match.</p>
+  {{end}}
+{{end}}

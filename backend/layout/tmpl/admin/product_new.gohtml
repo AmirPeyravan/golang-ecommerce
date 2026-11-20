@@ -1,0 +1,33 @@
+{{define "main"}}
+  <p class="crumbs"><a href="/admin/products">products</a> / new</p>
+  <h2 class="account-card__title">add a product</h2>
+
+  <section class="admin-section">
+    <form class="form" method="post" action="/admin/products" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <div class="field"><label for="p-id">id (slug)</label><input id="p-id" name="id" required placeholder="lowercase-with-hyphens"></div>
+      <div class="field"><label for="p-name">name</label><input id="p-name" name="name" required></div>
+      <div class="field"><label for="p-description">description</label><textarea id="p-description" name="description" required></textarea></div>
+      <div class="field"><label for="p-price">price (major units, e.g. 9.00)</label><input id="p-price" name="price" required placeholder="9.00"></div>
+      <div class="field"><label for="p-currency">currency</label><input id="p-currency" name="currency" value="USD"></div>
+      <div class="field">
+        <label for="p-thumbnail-file">thumbnail</label>
+        <input id="p-thumbnail-file" type="file" name="thumbnail_file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <input id="p-thumbnail" name="thumbnail" placeholder="or paste a URL">
+        <p class="form__aside muted">Upload an image, or paste a URL. If both are provided, the upload wins.</p>
+      </div>
+      <div class="field">
+        <label for="p-attribute-set">attribute set</label>
+        <select id="p-attribute-set" name="attribute_set">
+          <option value="">&mdash; none &mdash;</option>
+          {{range $s := .AttributeSets}}<option value="{{$s.ID}}">{{$s.Name}}</option>{{end}}
+        </select>
+        <p class="form__aside muted">the set defines which attributes this product has (and their order). You can change it later.</p>
+      </div>
+      <button type="submit" class="btn">create product</button>
+    </form>
+  </section>
+
+  <p class="form__aside">Need options &amp; multiple variants? <a href="/admin/products/new-variant">Create a variant product &rarr;</a></p>
+  <p class="form__aside"><a href="/admin/products">&larr; back to products</a></p>
+{{end}}

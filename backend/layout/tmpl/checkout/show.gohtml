@@ -1,0 +1,134 @@
+{{define "title"}}Checkout · {{.SiteName}}{{end}}
+{{define "description"}}Complete your order — shipping, payment, and confirmation.{{end}}
+
+{{define "main"}}
+  <h1 class="page-title">checkout</h1>
+
+  <div class="checkout">
+    <section class="checkout__summary">
+      <h2 class="checkout__heading">order summary</h2>
+      <table class="cart-table">
+        <thead>
+          <tr>
+            <th>item</th>
+            <th class="col-qty">qty</th>
+            <th class="col-total">subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $item := .Cart.Items}}
+            <tr>
+              <td>{{$item.Product.Name}}</td>
+              <td class="col-qty">{{$item.Quantity}}</td>
+              <td class="col-total">{{ money $item.Product.Price.Amount }}</td>
+            </tr>
+          {{end}}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">total</td>
+            <td class="col-total">{{ money .Cart.TotalPrice.Amount }}</td>
+          </tr>
+        </tfoot>
+      </table>
+      {{/*
+        Display-only disclosure: shoppers viewing the cart in a non-USD
+        currency need to know the charge is still in USD. The note stays
+        understated (.muted) so it doesn't drown the summary.
+      */}}
+      {{if ne .Currency "USD"}}
+        <p class="muted checkout__note">Prices shown in {{.Currency}}; orders are placed in USD.</p>
+      {{end}}
+    </section>
+
+    <section class="checkout__payment">
+      <h2 class="checkout__heading">details</h2>
+      <p class="muted checkout__note">demo only — no real card is charged. enter anything in the payment fields.</p>
+
+      <form class="form" method="post" action="/checkout">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+        <fieldset class="fieldset">
+          <legend class="fieldset__legend">promo code</legend>
+          <p class="muted checkout__note">have a code? enter it here — anonymous customers must sign in to redeem.</p>
+          <div class="field">
+            <label for="promo-code">code</label>
+            <input id="promo-code" type="text" name="promo_code" autocomplete="off" placeholder="SAVE10" value="{{with .PromoCode}}{{.}}{{end}}">
+          </div>
+        </fieldset>
+
+        <fieldset class="fieldset">
+          <legend class="fieldset__legend">shipping method</legend>
+          {{range .ShippingMethods}}
+            <label class="radio">
+              <input type="radio" name="ship_method" value="{{.Code}}" {{if eq .Code "flat"}}checked{{end}}>
+              <span class="radio__label">{{.Label}}</span>
+              <span class="radio__cost muted">{{ money .Cost }}</span>
+            </label>
+          {{end}}
+        </fieldset>
+
+        <fieldset class="fieldset">
+          <legend class="fieldset__legend">ship to</legend>
+          {{if .ShipTo}}
+            <p class="muted checkout__note">prefilled from your default address &mdash; edit if needed. not needed for personal pickup.</p>
+          {{else}}
+            <p class="muted checkout__note">not needed for personal pickup.</p>
+          {{end}}
+
+          <div class="field">
+            <label for="ship-name">full name</label>
+            <input id="ship-name" type="text" name="ship_name" autocomplete="name" placeholder="Jane Doe" value="{{with .ShipTo}}{{.Name}}{{end}}">
+          </div>
+          <div class="field">
+            <label for="ship-street1">street</label>
+            <input id="ship-street1" type="text" name="ship_street1" autocomplete="address-line1" placeholder="123 Main St" value="{{with .ShipTo}}{{.Street1}}{{end}}">
+          </div>
+          <div class="field">
+            <label for="ship-street2">street (line 2)</label>
+            <input id="ship-street2" type="text" name="ship_street2" autocomplete="address-line2" placeholder="Apt 4B (optional)" value="{{with .ShipTo}}{{.Street2}}{{end}}">
+          </div>
+          <div class="field">
+            <label for="ship-city">city</label>
+            <input id="ship-city" type="text" name="ship_city" autocomplete="address-level2" placeholder="Portland" value="{{with .ShipTo}}{{.City}}{{end}}">
+          </div>
+          <div class="field">
+            <label for="ship-zip">zip code</label>
+            <input id="ship-zip" type="text" name="ship_zip" autocomplete="postal-code" placeholder="97201" value="{{with .ShipTo}}{{.Zip}}{{end}}">
+          </div>
+          <div class="field">
+            <label for="ship-country">country</label>
+            <input id="ship-country" type="text" name="ship_country" autocomplete="country-name" placeholder="United States" value="{{with .ShipTo}}{{.Country}}{{end}}">
+          </div>
+        </fieldset>
+
+        <fieldset class="fieldset">
+          <legend class="fieldset__legend">payment method</legend>
+          {{range .PaymentMethods}}
+            <label class="radio">
+              <input type="radio" name="payment_method" value="{{.Code}}" {{if eq .Code "card"}}checked{{end}}>
+              <span class="radio__label">{{.Label}}</span>
+            </label>
+          {{end}}
+        </fieldset>
+
+        <fieldset class="fieldset">
+          <legend class="fieldset__legend">card details</legend>
+          <p class="muted checkout__note">only needed for card payments.</p>
+
+          <div class="field">
+            <label for="card-number">card number</label>
+            <input id="card-number" type="text" name="card_number" inputmode="numeric" autocomplete="cc-number" placeholder="4242 4242 4242 4242">
+          </div>
+          <div class="field">
+            <label for="card-name">name on card</label>
+            <input id="card-name" type="text" name="card_name" autocomplete="cc-name" placeholder="Jane Doe">
+          </div>
+        </fieldset>
+
+        <button type="submit" class="btn btn--block">place order</button>
+        <p class="form__aside"><a href="/cart">&larr; back to cart</a></p>
+      </form>
+    </section>
+  </div>
+{{end}}

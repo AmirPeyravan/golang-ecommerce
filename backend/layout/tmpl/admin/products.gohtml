@@ -1,0 +1,44 @@
+{{define "main"}}
+  <div class="admin-page-head">
+    <h2 class="account-card__title">products</h2>
+    <div class="admin-page-head__actions">
+      <a href="/admin/products/new" class="btn">+ Add product</a>
+      <a href="/admin/products/new-variant" class="btn btn--ghost">+ Variant product</a>
+    </div>
+  </div>
+
+  {{if .Products}}
+    <table class="admin-table">
+      <thead>
+        <tr><th>name</th><th>price</th><th>variants</th><th>stock</th><th>categories</th><th></th></tr>
+      </thead>
+      <tbody>
+        {{range $p := .Products}}
+          <tr>
+            <td>{{$p.Name}}<br><code>{{$p.ID}}</code></td>
+            <td>{{$p.Price.Currency}} {{$p.Price.Display}}</td>
+            <td>{{len $p.Variants}}</td>
+            <td>
+              {{$total := 0}}
+              {{range $v := $p.Variants}}{{$total = add $total $v.Stock}}{{end}}
+              {{$total}}
+            </td>
+            <td>
+              {{range $i, $c := $p.Categories}}{{if $i}}, {{end}}{{$c.Name}}{{else}}<span class="muted">&mdash;</span>{{end}}
+            </td>
+            <td class="admin-table__actions">
+              <a href="/admin/products/{{$p.ID}}/edit">edit</a>
+              <form method="post" action="/admin/products/{{$p.ID}}/delete"
+                    onsubmit="return confirm('Delete this product? Its variants, category and attribute links will be removed.');">
+                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                <button type="submit" class="linkbtn linkbtn--danger">delete</button>
+              </form>
+            </td>
+          </tr>
+        {{end}}
+      </tbody>
+    </table>
+  {{else}}
+    <p class="muted">no products yet.</p>
+  {{end}}
+{{end}}

@@ -1,0 +1,120 @@
+{{define "title"}}{{.Product.Name}} · {{.SiteName}}{{end}}
+{{define "description"}}{{truncate .Product.Description 160}}{{end}}
+{{define "ogtype"}}product{{end}}
+{{define "ogimage"}}{{.Product.Thumbnail}}{{end}}
+
+{{define "main"}}
+  <p class="crumbs"><a href="/">products</a> / {{.Product.Name}}</p>
+
+  <article class="product">
+    {{$img := .Product.Thumbnail}}{{if .Variant.Image}}{{$img = .Variant.Image}}{{end}}
+    {{if $img}}
+      <img id="product-image" class="product__image"
+           src="{{$img}}"
+           alt="{{.Product.Name}}"
+           width="800" height="800">
+    {{end}}
+
+    <div class="product__body">
+      <h1 class="product__name">{{.Product.Name}}</h1>
+      {{if gt .Aggregate.Count 0}}
+        <p class="product__rating muted">
+          rating: {{printf "%.1f" .Aggregate.Average}} / 5
+          ({{.Aggregate.Count}} review{{if ne .Aggregate.Count 1}}s{{end}})
+        </p>
+      {{end}}
+      <p class="product__description">{{.Product.Description}}</p>
+
+      {{if .Product.HasOptions}}
+        <form class="variant-form">
+          {{range .Product.OptionTypes}}
+            <div class="field">
+              <label for="opt-{{.Name}}">{{.Name}}</label>
+              <select id="opt-{{.Name}}" name="{{.Name}}"
+                      hx-get="/product/{{$.Product.ID}}/variant"
+                      hx-trigger="change"
+                      hx-include="closest form"
+                      hx-target="#variant-box"
+                      hx-swap="outerHTML">
+                {{range .Values}}<option value="{{.}}">{{.}}</option>{{end}}
+              </select>
+            </div>
+          {{end}}
+        </form>
+      {{end}}
+
+      {{template "variant-box" .}}
+
+      {{if or .Product.Attributes .Product.Categories}}
+        <section class="product__details">
+          <h2 class="product__details-heading">details</h2>
+          {{if .Product.Attributes}}
+            <ul class="product__attrs">
+              {{range .Product.Attributes}}
+                <li class="product__attr">
+                  <span class="product__attr-name">{{.Type.Name}}</span>
+                  <span class="product__attr-value">{{.Display}}</span>
+                </li>
+              {{end}}
+            </ul>
+          {{end}}
+          {{if .Product.Categories}}
+            <p class="product__cats">
+              {{range .Product.Categories}}<a class="product__cat" href="/category/{{.Slug}}">{{.Name}}</a>{{end}}
+            </p>
+          {{end}}
+        </section>
+      {{end}}
+
+      <p class="product__hint muted">added to your cart without a page reload.</p>
+    </div>
+  </article>
+
+  <section id="reviews" class="product-reviews">
+    <h2 class="product-reviews__title">reviews</h2>
+
+    {{if .Reviews}}
+      <ul class="product-reviews__list">
+        {{range $r := .Reviews}}
+          <li class="product-review">
+            <p class="product-review__head">
+              <span class="product-review__rating">{{$r.Rating}} / 5</span>
+              <span class="muted"> &middot; {{$r.CreatedAt.Format "Jan 2, 2006"}}</span>
+              <span class="muted"> &middot; {{$r.CustomerID}}</span>
+            </p>
+            <p class="product-review__body">{{$r.Body}}</p>
+          </li>
+        {{end}}
+      </ul>
+    {{else}}
+      <p class="muted">no reviews yet.</p>
+    {{end}}
+
+    {{if and .LoggedIn .CanReview (not .AlreadyReviewed)}}
+      <form class="product-review__form" method="post" action="/product/{{.Product.ID}}/review">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="field">
+          <label for="review-rating">rating</label>
+          <select id="review-rating" name="rating" required>
+            <option value="5">5 — excellent</option>
+            <option value="4">4 — good</option>
+            <option value="3">3 — okay</option>
+            <option value="2">2 — poor</option>
+            <option value="1">1 — bad</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="review-body">your review</label>
+          <textarea id="review-body" name="body" rows="4" required maxlength="4000"></textarea>
+        </div>
+        <button type="submit" class="btn">submit review</button>
+      </form>
+    {{else if and .LoggedIn .AlreadyReviewed}}
+      <p class="muted">you have already reviewed this product.</p>
+    {{else if .LoggedIn}}
+      <p class="muted">only verified buyers can leave a review.</p>
+    {{else}}
+      <p class="muted"><a href="/auth/login">log in</a> to leave a review.</p>
+    {{end}}
+  </section>
+{{end}}

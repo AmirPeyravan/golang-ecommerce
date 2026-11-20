@@ -1,0 +1,39 @@
+{{define "title"}}Cart · {{.SiteName}}{{end}}
+{{define "description"}}Review the items in your shopping cart.{{end}}
+
+{{define "main"}}
+  <h1 class="page-title">cart</h1>
+
+  {{if .Cart.Items}}
+    <table class="cart-table">
+      <thead>
+        <tr>
+          <th>item</th>
+          <th class="col-qty">qty</th>
+          <th class="col-price">price</th>
+          <th class="col-total">total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $item := .Cart.Items}}
+          <tr>
+            <td><a href="/product/{{$item.Product.ID}}">{{$item.Product.Name}}</a></td>
+            <td class="col-qty">{{$item.Quantity}}</td>
+            <td class="col-price">{{ money $item.Product.Price.Amount }}</td>
+            <td class="col-total">{{ money $item.Product.Price.Amount }}</td>
+          </tr>
+        {{end}}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">total</td>
+          <td class="col-total">{{ money .Cart.TotalPrice.Amount }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <a href="/checkout" class="btn">go to checkout</a>
+  {{else}}
+    <p class="cart-empty">your cart is empty. <a href="/">browse products</a></p>
+  {{end}}
+{{end}}

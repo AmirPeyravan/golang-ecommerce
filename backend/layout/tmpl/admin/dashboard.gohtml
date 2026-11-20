@@ -1,0 +1,31 @@
+{{define "main"}}
+  <p class="admin__hello">Signed in as <strong>{{.Email}}</strong>.</p>
+
+  <div class="admin__stats">
+    <section class="admin-stat">
+      <span class="admin-stat__value">{{.ProductCount}}</span>
+      <h2 class="admin-stat__label">products</h2>
+      <a href="/admin/products" class="admin-stat__link">manage &rarr;</a>
+    </section>
+    <section class="admin-stat">
+      <span class="admin-stat__value">{{.CategoryCount}}</span>
+      <h2 class="admin-stat__label">categories</h2>
+      <a href="/admin/categories" class="admin-stat__link">manage &rarr;</a>
+    </section>
+    <section class="admin-stat">
+      <span class="admin-stat__value">{{.OrderCount}}</span>
+      <h2 class="admin-stat__label">orders</h2>
+      <a href="/admin/orders" class="admin-stat__link">manage &rarr;</a>
+    </section>
+    {{if .TodaysSales}}
+    <section class="admin-stat">
+      <h2 class="admin-stat__label">today's revenue</h2>
+      <ul class="admin-stat__list">
+        {{range .TodaysSales}}
+          <li>{{.Currency}}: {{.OrdersCount}} orders, {{.RevenueDisplay}}</li>
+        {{end}}
+      </ul>
+    </section>
+    {{end}}
+  </div>
+{{end}}

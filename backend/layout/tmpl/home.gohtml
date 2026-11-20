@@ -1,0 +1,33 @@
+{{define "title"}}New arrivals · {{.SiteName}}{{end}}
+{{define "description"}}Newest products from our store.{{end}}
+
+{{define "main"}}
+  <div class="home-hero">
+    <h1 class="page-title">new arrivals</h1>
+    <a class="btn home-hero__shop" href="/products">shop all</a>
+  </div>
+
+  {{if .Newest}}
+    <div class="product-grid">
+      {{range .Newest}}
+        <a class="product-card" href="/product/{{.ID}}">
+          {{if .Thumbnail}}
+            <img class="product-card__image"
+                 src="{{.Thumbnail}}"
+                 alt="{{.Name}}"
+                 loading="lazy"
+                 width="800" height="800">
+          {{end}}
+          <h2 class="product-card__name">{{.Name}}</h2>
+          <p class="product-card__price">{{if .HasPriceRange}}from {{end}}{{ money .PriceFrom.Amount }}</p>
+        </a>
+      {{end}}
+    </div>
+
+    <p class="home-browse">
+      <a href="/products">browse everything &rarr;</a>
+    </p>
+  {{else}}
+    <p class="muted">no products yet. <a href="/products">browse the shop</a>.</p>
+  {{end}}
+{{end}}

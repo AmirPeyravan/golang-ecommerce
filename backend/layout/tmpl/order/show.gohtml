@@ -1,0 +1,163 @@
+{{define "title"}}Order {{.Order.ID}} · {{.SiteName}}{{end}}
+{{define "description"}}Order details and status.{{end}}
+
+{{define "main"}}
+  <p class="crumbs"><a href="/">products</a> / order</p>
+
+  <article class="order">
+    <header class="order__header">
+      {{if eq .Order.Status "cancelled"}}
+        <h1 class="order__title">order cancelled.</h1>
+      {{else if eq .Order.Status "refunded"}}
+        <h1 class="order__title">order refunded.</h1>
+      {{else if eq .Order.Status "delivered"}}
+        <h1 class="order__title">delivered.</h1>
+      {{else if eq .Order.Status "shipped"}}
+        <h1 class="order__title">on its way.</h1>
+      {{else}}
+        <h1 class="order__title">thank you.</h1>
+      {{end}}
+      <p class="order__subtitle muted">
+        order <span class="order__id">{{.Order.ID}}</span> &middot;
+        <span class="order-status order-status--{{.Order.Status}}">{{.Order.Status}}</span> &middot;
+        placed {{.Order.PlacedAt.Format "Jan 2, 2006 15:04 MST"}}
+      </p>
+    </header>
+
+    <table class="cart-table order__lines">
+      <thead>
+        <tr>
+          <th>item</th>
+          <th class="col-qty">qty</th>
+          <th class="col-price">unit</th>
+          <th class="col-total">subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $line := .Order.Items}}
+          <tr>
+            <td>{{$line.ProductName}}</td>
+            <td class="col-qty">{{$line.Quantity}}</td>
+            <td class="col-price">{{ money $line.PriceAmount }}</td>
+            <td class="col-total">{{ money $line.LineTotal }}</td>
+          </tr>
+        {{end}}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">subtotal</td>
+          <td class="col-total">{{ money .Order.Subtotal }}</td>
+        </tr>
+        {{if or (gt .Order.DiscountAmount 0) .Order.DiscountCode}}
+          <tr>
+            <td colspan="3">discount{{with .Order.DiscountCode}} &middot; <code>{{.}}</code>{{end}}</td>
+            <td class="col-total">
+              {{if gt .Order.DiscountAmount 0}}-{{ money .Order.DiscountAmount }}{{else}}free shipping{{end}}
+            </td>
+          </tr>
+        {{end}}
+        {{if gt .Order.TaxAmount 0}}
+          <tr>
+            <td colspan="3">tax</td>
+            <td class="col-total">{{ money .Order.TaxAmount }}</td>
+          </tr>
+        {{end}}
+        {{if not .Order.ShippingMethod.IsZero}}
+          <tr>
+            <td colspan="3">shipping &middot; {{.Order.ShippingMethod.Label}}</td>
+            <td class="col-total">
+              {{if eq .Order.ShippingCost 0}}free{{else}}{{ money .Order.ShippingCost }}{{end}}
+            </td>
+          </tr>
+        {{end}}
+        <tr>
+          <td colspan="3">total charged</td>
+          <td class="col-total">{{ money .Order.TotalAmount }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    {{/*
+      Display-only currency disclosure. Renders when the customer is
+      viewing the order in a non-default currency. The order itself was
+      placed in USD; we make that clear so the totals row isn't
+      misread as the amount actually charged.
+    */}}
+    {{if ne .Currency "USD"}}
+      <p class="order__hint muted">Prices shown in {{.Currency}}; orders are placed in USD.</p>
+    {{end}}
+
+    {{if eq .Order.ShippingMethod.Code "pickup"}}
+      <section class="order__ship">
+        <h2 class="order__ship-heading">collection</h2>
+        <p>Personal pickup — collect in store.</p>
+      </section>
+    {{else if not .Order.ShipTo.IsZero}}
+      <section class="order__ship">
+        <h2 class="order__ship-heading">shipping to</h2>
+        <address class="order__address">
+          {{.Order.ShipTo.Name}}<br>
+          {{.Order.ShipTo.Street1}}<br>
+          {{with .Order.ShipTo.Street2}}{{.}}<br>{{end}}
+          {{.Order.ShipTo.City}}, {{.Order.ShipTo.Zip}}<br>
+          {{.Order.ShipTo.Country}}
+        </address>
+      </section>
+    {{end}}
+
+    {{if .HasFulfillment}}
+      <section class="order__ship">
+        <h2 class="order__ship-heading">fulfillment</h2>
+        <p>
+          status: <span class="order-status order-status--{{.Fulfillment.Status}}">{{.Fulfillment.Status}}</span>
+        </p>
+        {{if eq (printf "%s" .Fulfillment.Status) "shipped"}}
+          <p>
+            {{with .Fulfillment.Carrier}}carrier: {{.}}{{end}}
+            {{if and .Fulfillment.Carrier .Fulfillment.TrackingCode}} &middot; {{end}}
+            {{with .Fulfillment.TrackingCode}}tracking: <code>{{.}}</code>{{end}}
+          </p>
+        {{else if eq (printf "%s" .Fulfillment.Status) "delivered"}}
+          <p>
+            {{with .Fulfillment.Carrier}}carrier: {{.}} &middot; {{end}}
+            {{with .Fulfillment.TrackingCode}}tracking: <code>{{.}}</code> &middot; {{end}}
+            delivered {{.Fulfillment.DeliveredAt.Format "Jan 2, 2006 15:04 MST"}}
+          </p>
+        {{else if eq (printf "%s" .Fulfillment.Status) "refunded"}}
+          <p>
+            refunded{{with .Fulfillment.RefundReason}} &middot; reason: {{.}}{{end}}
+          </p>
+        {{end}}
+      </section>
+    {{else if or (eq .Order.Status "shipped") (eq .Order.Status "delivered")}}
+      <section class="order__ship">
+        <h2 class="order__ship-heading">fulfillment</h2>
+        <p>
+          {{if eq .Order.Status "shipped"}}shipped{{else}}delivered{{end}}
+          {{with .Order.Carrier}} &middot; carrier: {{.}}{{end}}
+          {{with .Order.TrackingCode}} &middot; tracking: <code>{{.}}</code>{{end}}
+        </p>
+      </section>
+    {{end}}
+
+    {{if not .Order.PaymentMethod.IsZero}}
+      <section class="order__ship">
+        <h2 class="order__ship-heading">payment</h2>
+        <p>{{.Order.PaymentMethod.Label}}</p>
+      </section>
+    {{end}}
+
+    <p class="order__hint muted">a confirmation email would normally be on its way. this is a demo, so nothing was actually charged or sent.</p>
+
+    <div class="order__actions">
+      <a href="/" class="btn btn--ghost">continue shopping</a>
+      {{if .CanCancel}}
+        <form method="post" action="/order/{{.Order.ID}}/cancel"
+              onsubmit="return confirm('Cancel this order? Reserved stock will be released.');">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <button type="submit" class="linkbtn linkbtn--danger">cancel order</button>
+        </form>
+      {{end}}
+    </div>
+  </article>
+{{end}}

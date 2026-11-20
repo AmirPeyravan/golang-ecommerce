@@ -1,0 +1,7 @@
+<li hx-get="/auth/menuIcon" hx-trigger="authMenuItem from:body" hx-swap="outerHTML">
+  {{if .LoggedIn}}
+    <a href="/auth/logout">log out</a>
+  {{else}}
+    <a href="/auth/login">sign in</a>
+  {{end}}
+</li>

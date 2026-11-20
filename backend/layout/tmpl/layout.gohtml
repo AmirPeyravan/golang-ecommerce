@@ -1,0 +1,113 @@
+{{define "base"}}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {{/*
+      Per-page SEO blocks. Each page template can {{define "title"}}…{{end}} to
+      override the storefront default. The og:* blocks fall back to the title
+      and description so a page only has to set one place.
+    */}}
+    <title>{{block "title" .}}{{.SiteName}}{{end}}</title>
+    <meta name="description" content="{{block "description" .}}A small Go + HTMX e-commerce demo store.{{end}}">
+    <link rel="canonical" href="{{block "canonical" .}}{{.CanonicalURL}}{{end}}">
+    <meta property="og:site_name" content="{{.SiteName}}">
+    <meta property="og:title" content="{{block "ogtitle" .}}{{template "title" .}}{{end}}">
+    <meta property="og:type" content="{{block "ogtype" .}}website{{end}}">
+    <meta property="og:url" content="{{block "ogurl" .}}{{template "canonical" .}}{{end}}">
+    <meta property="og:description" content="{{block "ogdescription" .}}{{template "description" .}}{{end}}">
+    <meta property="og:image" content="{{block "ogimage" .}}{{end}}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Source+Serif+Pro:wght@400;600&display=swap">
+
+    <link rel="stylesheet" href="/static/main.css">
+    <script src="https://unpkg.com/htmx.org@1.9.5"></script>
+    <script>
+      // Stamp X-CSRF-Token on every HTMX-issued request. HTMX-driven
+      // POSTs (most notably the add-to-cart button on the variant box)
+      // do not include the hidden csrf_token form field that server-
+      // rendered <form method="post"> blocks carry, so the header is
+      // the only channel they have to satisfy csrfMiddleware. Wiring
+      // this once in the base layout covers every HTMX call site.
+      // The listener is attached to `document` (which exists in <head>)
+      // because htmx events bubble — `document.body` does not exist yet.
+      document.addEventListener('htmx:configRequest', function (event) {
+        event.detail.headers['X-CSRF-Token'] = {{ .CSRFToken }};
+      });
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+
+    <header class="site-header">
+      <div class="shell site-header__inner">
+        <a href="/" class="brand">Ecommerce</a>
+        <form class="site-search" role="search" action="/search" method="get">
+          <label class="visually-hidden" for="site-search-q">Search</label>
+          <input id="site-search-q" type="search" name="q"
+                 placeholder="Search&hellip;"
+                 value="{{.SearchQuery}}"
+                 hx-get="/api/v1/products"
+                 hx-trigger="keyup changed delay:300ms"
+                 hx-target="#product-grid"
+                 hx-swap="innerHTML"
+                 hx-include="[name=category]">
+        </form>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="/products">shop</a></li>
+            {{range .NavCategories}}
+              <li><a href="/category/{{.Slug}}">{{.Name}}</a></li>
+            {{end}}
+            <li>
+              <a href="/cart" class="cart-link" aria-label="Cart">cart
+                <span id="cartBudge"
+                      hx-get="/cart/budge"
+                      hx-trigger="load, cartBudge from:body"
+                      hx-swap="outerHTML"
+                      class="cart-link__count"></span>
+              </a>
+            </li>
+            {{if .LoggedIn}}
+              <li><a href="/account">account</a></li>
+            {{end}}
+            {{if .IsAdmin}}
+              <li><a href="/admin">admin</a></li>
+            {{end}}
+            {{ html .AuthMenuItem }}
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <div class="shell">
+        {{ range .FlashInfo }}
+          <p class="flash flash--info">{{ . }}</p>
+        {{ end }}
+        {{ range .FlashError }}
+          <p class="flash flash--error">{{ . }}</p>
+        {{ end }}
+
+        {{template "main" .}}
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell">
+        &copy; 2026 &middot;
+        <a href="https://github.com/golang-app/ecommerce">go-ecommerce</a>
+        {{if .Stores}}
+          &middot; <a class="store-link" href="/stores">stores</a>
+          {{with .ActiveStore}}{{if .Name}}<span class="muted"> ({{.Name}})</span>{{end}}{{end}}
+        {{end}}
+      </div>
+    </footer>
+
+  </body>
+</html>
+{{end}}
